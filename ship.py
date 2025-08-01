@@ -3,7 +3,7 @@ import pygame
 class Ship():
     def __init__(self, ai_game):
         self.screen = ai_game.screen
-        self.screen_rect = self.screen.get_rect()  # Исправлено!
+        self.screen_rect = self.screen.get_rect() 
         self.image = pygame.image.load('images/ship_1_cropped.bmp')
         self.rect = self.image.get_rect()
         self.rect.midbottom = self.screen_rect.midbottom
@@ -16,9 +16,9 @@ class Ship():
         self.y = self.rect.y
     
     def update(self):
-        if self.moving_right :
+        if self.moving_right and self.rect.right < self.screen_rect.right:
             self.x += self.settings.ship_speed
-        if self.moving_left:
+        if self.moving_left and self.rect.left > 0:
             self.x -= self.settings.ship_speed
         if self.moving_up:
             self.y -= self.settings.ship_speed
@@ -26,6 +26,7 @@ class Ship():
             self.y += self.settings.ship_speed    
         self.rect.x = self.x
         self.rect.y = self.y
+    
 
     def blitime(self):
         self.screen.blit(self.image, self.rect)
