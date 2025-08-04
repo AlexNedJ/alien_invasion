@@ -2,6 +2,7 @@ import sys
 from seting import Settings
 from ship import Ship
 import pygame
+from bullet import Bullet
 
 class AlianInvasion:
     def __init__(self):
@@ -20,12 +21,14 @@ class AlianInvasion:
             )
         pygame.display.set_caption("Alian Invasion")
         self.ship = Ship(self)
+        self.bullets = pygame.sprite.Group()
 
     def run_game(self):
         while True:
             self._check_events()
             self.ship.update()
             self._update_screen()
+            self.bullets.update()
 
     def _check_events(self):
         for event in pygame.event.get():
@@ -53,6 +56,13 @@ class AlianInvasion:
                 
         elif event.key == pygame.K_DOWN:
             self.ship.moving_down = True
+        
+        elif event.key == pygame.K_SPACE:
+            self._fire_bullet()
+
+    def _fire_bullet(self):
+        new_bullet = Bullet(self)
+        self.bullets.add(new_bullet)
     
     def _check_keyup_events(self, event):
         if event.key == pygame.K_RIGHT:
@@ -70,6 +80,8 @@ class AlianInvasion:
     def _update_screen(self):
         self.screen.fill(self.settings.bg_color)
         self.ship.blitime()
+        for bullet in self.bullets.sprites():
+            bullet.draw_bullet()
         pygame.display.flip()
         
 if __name__ == '__main__':
