@@ -3,6 +3,7 @@ from seting import Settings
 from ship import Ship
 import pygame
 from bullet import Bullet
+from alien import Alian
 
 class AlianInvasion:
     def __init__(self):
@@ -22,6 +23,8 @@ class AlianInvasion:
         pygame.display.set_caption("Alian Invasion")
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
+        self.alians = pygame.sprite.Group()
+        self._create_fleet()
 
     def run_game(self):
         while True:
@@ -29,7 +32,8 @@ class AlianInvasion:
             self.ship.update()
             self._update_screen()
             self.bullets.update()
-
+            self._update_bullets_()
+            
     def _check_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -61,8 +65,9 @@ class AlianInvasion:
             self._fire_bullet()
 
     def _fire_bullet(self):
-        new_bullet = Bullet(self)
-        self.bullets.add(new_bullet)
+        if len(self.bullets) < self.settings.bullet_allowed:
+            new_bullet = Bullet(self)
+            self.bullets.add(new_bullet)
     
     def _check_keyup_events(self, event):
         if event.key == pygame.K_RIGHT:
@@ -76,12 +81,32 @@ class AlianInvasion:
                 
         elif event.key == pygame.K_DOWN:
             self.ship.moving_down = False
-
+            
+    def _update_bullets_(self):
+        for bullet in self.bullets.copy():
+            if bullet.rect.bottom <= 0:
+                self.bullets.remove(bullet) 
+                
+    def _create_fleet(self):
+        alian = Alian(self)
+        alian_width = alian.rect.width
+        available_space_x = self.settings.screen_width - (2 * alian_width)
+        number_alians_x = available_space_x - (2 * alian_width) // ( 2 * alian_width) 
+        
+        # создание 1 ряда прищельцев
+        for alian_number in range(number_alians_x):
+            # создание прищельца и размешение его в ряду
+            alian = Alian(self)
+            alian.x = alian_width + 2 * alian_width * alian_number
+            alian.rect.x = alian.x
+            self.alians.add(alian)
+                       
     def _update_screen(self):
         self.screen.fill(self.settings.bg_color)
         self.ship.blitime()
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
+        self.alians.draw(self.screen)
         pygame.display.flip()
         
 if __name__ == '__main__':
