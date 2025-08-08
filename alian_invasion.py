@@ -90,16 +90,28 @@ class AlianInvasion:
     def _create_fleet(self):
         alian = Alian(self)
         alian_width = alian.rect.width
+        alian_width, alian_height = alian.rect.size
         available_space_x = self.settings.screen_width - (2 * alian_width)
         number_alians_x = available_space_x - (2 * alian_width) // ( 2 * alian_width) 
-        
-        # создание 1 ряда прищельцев
-        for alian_number in range(number_alians_x):
-            # создание прищельца и размешение его в ряду
-            alian = Alian(self)
-            alian.x = alian_width + 2 * alian_width * alian_number
-            alian.rect.x = alian.x
-            self.alians.add(alian)
+        # определение количество рядов помещенных на экран
+        ship_height = self.ship.rect.height
+        available_space_y = (self.settings.screen_height - (3 * alian_height) - ship_height)
+        number_rows = available_space_y // (2 * alian_height)
+
+        # создание флота прищельцев
+        for row_number in range(number_rows):
+            for alian_number in range(number_alians_x):
+                self._create_alian(alian_number, row_number)
+    
+    
+    
+    def _create_alian(self, alian_number, row_number):
+        alian = Alian(self)
+        alian_width, alian_height = alian.rect.size
+        alian.x = alian_width + 2 * alian_width * alian_number
+        alian.rect.x = alian.x
+        alian.rect.y = alian.rect.height + 2 * alian.rect.height * row_number
+        self.alians.add(alian)
                        
     def _update_screen(self):
         self.screen.fill(self.settings.bg_color)
