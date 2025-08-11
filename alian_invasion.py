@@ -8,18 +8,10 @@ from alien import Alian
 class AlianInvasion:
     def __init__(self):
         pygame.init()
-        mode = input("Запустить в полноэкранном режиме? (y/n): ").strip().lower()
-        if mode == 'y':
-            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-            self.settings = Settings()
-            self.settings.screen_width = self.screen.get_rect().width
-            self.settings.screen_height = self.screen.get_rect().height
-            self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
-        else:
-            self.settings = Settings()
-            self.screen = pygame.display.set_mode(
-                (self.settings.screen_width, self.settings.screen_height)
-            )
+        self.settings = Settings()
+        self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
+
+        self.background = self.settings.background
         pygame.display.set_caption("Alian Invasion")
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
@@ -114,7 +106,7 @@ class AlianInvasion:
         self.alians.add(alian)
                        
     def _update_screen(self):
-        self.screen.fill(self.settings.bg_color)
+        self.screen.blit(self.settings.background, self.settings.moon_pos)
         self.ship.blitime()
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
