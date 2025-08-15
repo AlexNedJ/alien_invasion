@@ -2,6 +2,10 @@ import pygame
 
 class Settings():
     def __init__(self):
+        self.alian_speed = 0.2
+        self.fleet_drop_speed = 10
+        # fleet_directions = 1 обозначает движение вправо; -1 - влево
+        self.fleet_direction = 1
         self.screen_width = 800
         self.screen_height = 600
         self.background = pygame.image.load('images/moon.bmp')
