@@ -26,4 +26,3 @@ class Alian(Sprite):
         # движение вправо
         self.x += (self.settings.alian_speed * self.settings.fleet_direction)
         self.rect.x = self.x
-

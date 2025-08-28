@@ -10,6 +10,8 @@ class Settings():
         self.screen_height = 600
         self.background = pygame.image.load('images/moon.bmp')
         self.moon_pos = (self.screen_width - self.background.get_width(), 0)
+        self.meteorite= pygame.image.load('images/meteorite-1414819_1280.bmp')
+        self.meteorite_pos = (self.screen_height - self.meteorite.get_width(), 100)
         self.ship_speed = 1      
         # это параметры снаряда
         self.bullet_speed = 0.5

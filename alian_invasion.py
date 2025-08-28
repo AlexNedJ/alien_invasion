@@ -12,7 +12,7 @@ class AlianInvasion:
         self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
 
         self.background = self.settings.background
-        pygame.display.set_caption("Alian Invasion")
+        pygame.display.set_caption("Alian Invasion!")
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.alians = pygame.sprite.Group()
@@ -24,7 +24,7 @@ class AlianInvasion:
             self.ship.update()
             self._update_bullets()
             self._update_alians()
-            self._update_screen()
+            self._update_screen()# <--тут закончили
             
     def _check_events(self):
         for event in pygame.event.get():
@@ -83,7 +83,7 @@ class AlianInvasion:
         alian = Alian(self)
         alian_width, alian_height = alian.rect.size
         available_space_x = self.settings.screen_width - (2 * alian_width)
-        number_alians_x = available_space_x // (2 * alian_width)  # ← исправлено
+        number_alians_x = available_space_x // (2 * alian_width)
 
         ship_height = self.ship.rect.height
         available_space_y = (self.settings.screen_height - (3 * alian_height) - ship_height)
@@ -92,7 +92,6 @@ class AlianInvasion:
         for row_number in range(number_rows):
             for alian_number in range(number_alians_x):
                 self._create_alian(alian_number, row_number)
-
     
     def _create_alian(self, alian_number, row_number):
         alian = Alian(self)
@@ -103,12 +102,13 @@ class AlianInvasion:
         self.alians.add(alian)
                        
     def _update_screen(self):
-        self.screen.fill((0, 0, 0)) # clear screen
+        self.screen.fill((0, 0, 0)) 
         self.screen.blit(self.settings.background, self.settings.moon_pos)
+        self.screen.blit(self.settings.meteorite, self.settings.meteorite_pos)
         self.ship.blitime()
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
-        self.alians.draw(self.screen)
+        self.alians.draw(self.screen)# clear screen
         pygame.display.flip()
    
     def _update_alians(self):
