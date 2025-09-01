@@ -24,7 +24,7 @@ class AlianInvasion:
             self.ship.update()
             self._update_bullets()
             self._update_alians()
-            self._update_screen()# <--тут закончили
+            self._update_screen()
             
     def _check_events(self):
         for event in pygame.event.get():
@@ -102,13 +102,13 @@ class AlianInvasion:
         self.alians.add(alian)
                        
     def _update_screen(self):
-        self.screen.fill((0, 0, 0)) 
+        self.screen.fill((0, 0, 0)) # clear screen
         self.screen.blit(self.settings.background, self.settings.moon_pos)
         self.screen.blit(self.settings.meteorite, self.settings.meteorite_pos)
         self.ship.blitime()
         for bullet in self.bullets.sprites():
             bullet.draw_bullet()
-        self.alians.draw(self.screen)# clear screen
+        self.alians.draw(self.screen)# <--тут закончили
         pygame.display.flip()
    
     def _update_alians(self):
