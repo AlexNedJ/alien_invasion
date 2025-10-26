@@ -1,28 +1,37 @@
 import pygame
-from pygame.sprite import Sprite
+import random
 
-class Alian(Sprite):
-    def __init__(self, ai_game):
+class Alian(pygame.sprite.Sprite):
+    def __init__(self, screen, settings, x=None, y=None, speed_y=None, speed_x=None):
         super().__init__()
-        self.screen = ai_game.screen
-        self.settings = ai_game.settings
+        self.screen = screen
+        self.settings = settings
         # запускаем изображение прищельца и назначаем атрибут rect
         self.image = pygame.image.load('images/alien_invasion_1.bmp')
         self.rect = self.image.get_rect()
-        # каждый новый прищелец появляеться в левом верхнем углу экрана
-        self.rect.x = self.rect.width
-        self.rect.y = self.rect.height
-        # сохранение точной горизонтальной позиции прищельца
+        self.rect.x = x if x is not None else self.rect.width
+        self.rect.y = y if y is not None else self.rect.height
         self.x = float(self.rect.x)
+        self.y = float(self.rect.y)
+        self.speed_y = speed_y if speed_y is not None else random.uniform(self.settings.rain_speed_min, self.settings.rain_speed_max)
+        self.speed_x = speed_x if speed_x is not None else random.uniform(self.settings.rain_wind_min, self.settings.rain_wind_max)
     
-    def check_edges(self):
-        """Возвращает True, если пришелец достиг края экрана (слева или справа)."""
-        screen_rect = self.screen.get_rect()
-        if self.rect.right >= screen_rect.right or self.rect.left <= 0:
-            return True
-        return False
 
     def update(self):
-        # движение вправо
-        self.x += (self.settings.alian_speed * self.settings.fleet_direction)
-        self.rect.x = self.x
+            self.x += self.speed_x
+            self.y += self.speed_y
+            self.rect.x = int(self.x)
+            self.rect.y = int(self.y)
+            if self.rect.top > self.screen.get_rect().bottom:
+                self.y = float(-self.rect.height)
+                self.x = random.randint(0, self.settings.screen_width - self.rect.width)
+                self.speed_y = random.uniform(self.settings.rain_speed_min, self.settings.rain_speed_max)
+                self.speed_x = random.uniform(self.settings.rain_wind_min, self.settings.rain_wind_max)
+            # Если капля вышла за правый край, меняем направление на противоположное
+            if self.rect.right > self.screen.get_rect().right:
+                self.x = self.screen.get_rect().right - self.rect.width
+                self.speed_x = -abs(self.speed_x)  # Движение влево
+            # Если капля вышла за левый край, меняем направление на противоположное
+            elif self.rect.left < 0:
+                self.x = 0
+                self.speed_x = abs(self.speed_x) 

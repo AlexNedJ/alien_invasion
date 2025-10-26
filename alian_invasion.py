@@ -4,57 +4,133 @@ from ship import Ship
 import pygame
 from bullet import Bullet
 from alien import Alian
+import random
 
 class AlianInvasion:
     def __init__(self):
         pygame.init()
+        self.clock = pygame.time.Clock() 
+        self.game_active = True
+        self.game_over_font = pygame.font.Font(None, 74)
+        self.button_font = pygame.font.Font(None, 36)
+        
         self.settings = Settings()
         self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
-
+        self.screen_rect = self.screen.get_rect()
+        self.score = 0
+        self.hits_for_extra_life = 0            # счетчик попаданий для доп. жизни
+        self.lives = 3                          # начальные жизни
+        self.invulnerable = False               # флаг неуязвимости после попадания
+        self.invulnerable_start = 0
+        self.invulnerable_duration = 2000      # мс — длительность неуязвимости
+        self.font = pygame.font.Font(None, self.settings.score_font_size)
+    
         self.background = self.settings.background
         pygame.display.set_caption("Alian Invasion!")
         self.ship = Ship(self)
         self.bullets = pygame.sprite.Group()
         self.alians = pygame.sprite.Group()
         self._create_fleet()
+        
+        # ----- moon animation init -----
+        self.moon_surf = getattr(self.settings, 'moon', None)
+        if not self.moon_surf:
+            try:
+                self.moon_surf = pygame.image.load('images/moon.bmp').convert_alpha()
+            except Exception:
+                self.moon_surf = pygame.Surface((80, 80), pygame.SRCALPHA)
+                pygame.draw.circle(self.moon_surf, (200, 200, 200), (40, 40), 40)
+        self.moon_w, self.moon_h = self.moon_surf.get_size()
+        box_w, box_h = 220, 220
+        self.moon_box = pygame.Rect(self.settings.screen_width - box_w - 10, 10, box_w, box_h)
+        self.moon_x = random.uniform(self.moon_box.left, self.moon_box.right - self.moon_w)
+        self.moon_y = random.uniform(self.moon_box.top, self.moon_box.bottom - self.moon_h)
+        self.moon_vx = random.uniform(-0.025, 0.025)   # скорость в пикселях/мс (маленькая)
+        self.moon_vy = random.uniform(-0.015, 0.015)
+        self.moon_change_timer = 0
 
     def run_game(self):
         while True:
             self._check_events()
-            self.ship.update()
-            self._update_bullets()
-            self._update_alians()
-            self._update_screen()
+            if self.game_active:
+                self.ship.update()
+                self._update_bullets()
+                self._update_alians()
+                self._check_invulnerability()
+                self._update_background_objects()
+                self._update_screen()
+            
+    def _update_background_objects(self):
+        # --- moon ---
+        self.moon_x += self.moon_vx
+        self.moon_y += self.moon_vy
+        # отскок внутри коробки
+        if self.moon_x < self.moon_box.left:
+            self.moon_x = self.moon_box.left
+            self.moon_vx *= -1
+        if self.moon_x > self.moon_box.right - self.moon_w:
+            self.moon_x = self.moon_box.right - self.moon_w
+            self.moon_vx *= -1
+        if self.moon_y < self.moon_box.top:
+            self.moon_y = self.moon_box.top
+            self.moon_vy *= -1
+        if self.moon_y > self.moon_box.bottom - self.moon_h:
+            self.moon_y = self.moon_box.bottom - self.moon_h
+            self.moon_vy *= -1
+
+        if self.moon_change_timer > 3000:  # каждые ~3 секунды немного меняем направление
+            self.moon_vx = random.uniform(-0.03, 0.03)
+            self.moon_vy = random.uniform(-0.02, 0.02)
             
     def _check_events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                self._check_keydown_events(event) # событие нажатие на кнопку
+                self._check_keydown_events(event) # событие нажатие на кнопку # <--тут закончили
 
             elif event.type == pygame.KEYUP: # событие отпустили кнопку
                 self._check_keyup_events(event)
 
     def _check_keydown_events(self, event):
-        if event.key == pygame.K_RIGHT:
-            self.ship.rect.x += 1
-            self.ship.moving_right = True
+        if self.game_active:
+            if event.key == pygame.K_RIGHT:
+                self.ship.rect.x += 1
+                self.ship.moving_right = True
+            elif event.key == pygame.K_LEFT:
+                self.ship.rect.x -= 1
+                self.ship.moving_left = True
+            elif event.key == pygame.K_q:
+                sys.exit()               
+            elif event.key == pygame.K_UP:
+                self.ship.moving_up = True
                     
-        elif event.key == pygame.K_LEFT:
-            self.ship.rect.x -= 1
-            self.ship.moving_left = True
-        elif event.key == pygame.K_q:
-            sys.exit()
-                
-        elif event.key == pygame.K_UP:
-            self.ship.moving_up = True
-                
-        elif event.key == pygame.K_DOWN:
-            self.ship.moving_down = True
+            elif event.key == pygame.K_DOWN:
+                self.ship.moving_down = True
+            
+            elif event.key == pygame.K_SPACE:
+                self._fire_bullet()
+                pass
+        else:
+            if event.key == pygame.K_RETURN:  # Enter для перезапуска
+                self._reset_game()
+            elif event.key == pygame.K_ESCAPE:  # Esc для выхода
+                sys.exit()
+    
+    def _reset_game(self):
+        # Сброс игры к начальному состоянию
+        self.game_active = True
+        self.score = 0
+        self.hits_for_extra_life = 0
+        self.lives = 3
+        self.bullets.empty()
+        self.alians.empty()
         
-        elif event.key == pygame.K_SPACE:
-            self._fire_bullet()
+        self.ship.rect.midbottom = self.screen_rect.midbottom
+        self.ship.x = float(self.ship.rect.x)
+        self.ship.y = float(self.ship.rect.y)
+        
+        self._create_fleet()
 
     def _fire_bullet(self):
         if len(self.bullets) < self.settings.bullet_allowed:
@@ -78,57 +154,109 @@ class AlianInvasion:
         for bullet in self.bullets.copy():
             if bullet.rect.bottom <= 0:
                 self.bullets.remove(bullet) 
-                
-    def _create_fleet(self):
-        alian = Alian(self)
-        alian_width, alian_height = alian.rect.size
-        available_space_x = self.settings.screen_width - (2 * alian_width)
-        number_alians_x = available_space_x // (2 * alian_width)
-
-        ship_height = self.ship.rect.height
-        available_space_y = (self.settings.screen_height - (3 * alian_height) - ship_height)
-        number_rows = available_space_y // (2 * alian_height)
-
-        for row_number in range(number_rows):
-            for alian_number in range(number_alians_x):
-                self._create_alian(alian_number, row_number)
-    
-    def _create_alian(self, alian_number, row_number):
-        alian = Alian(self)
-        alian_width, alian_height = alian.rect.size
-        alian.x = alian_width + 2 * alian_width * alian_number
-        alian.rect.x = alian.x
-        alian.rect.y = alian.rect.height + 2 * alian.rect.height * row_number
-        self.alians.add(alian)
+        self._check_bullet_alien()
+        
+        if not self.alians:
+            self.bullets.empty()
+            self._create_fleet()
+                        
+    def _check_bullet_alien(self):
+        collisions = pygame.sprite.groupcollide(self.bullets, self.alians, True, True)
+            
+        if collisions:
+            # подсчет уничтоженных пришельцев в этой итерации
+            destroyed = sum(len(v) for v in collisions.values())
+            self.score += destroyed
+            self.hits_for_extra_life += destroyed
+            # каждые 50 попаданий даем +1 жизнь
+            while self.hits_for_extra_life >= 50:
+                self.lives += 1
+                self.hits_for_extra_life -= 50
                        
     def _update_screen(self):
         self.screen.fill((0, 0, 0)) # clear screen
-        self.screen.blit(self.settings.background, self.settings.moon_pos)
-        self.screen.blit(self.settings.meteorite, self.settings.meteorite_pos)
-        self.ship.blitime()
-        for bullet in self.bullets.sprites():
-            bullet.draw_bullet()
-        self.alians.draw(self.screen)# <--тут закончили
+        # отрисовка Луны (перед основным фоном, но позади корабля/пришельцев)
+        self.screen.blit(self.moon_surf, (int(self.moon_x), int(self.moon_y)))
+            
+        if self.game_active:
+            self.ship.blitime()
+            for bullet in self.bullets.sprites():
+                bullet.draw_bullet()
+            self.alians.draw(self.screen)
+            
+            # Отображение счета и жизней
+            score_text = self.font.render(f'Score: {self.score}', True, self.settings.score_color)
+            score_rect = score_text.get_rect()
+            score_rect.right = self.settings.screen_width - 10
+            score_rect.top = 10
+            self.screen.blit(score_text, score_rect)
+
+            lives_text = self.font.render(f'Lives: {self.lives}', True, self.settings.score_color)
+            lives_rect = lives_text.get_rect()
+            lives_rect.left = 10
+            lives_rect.top = 10
+            self.screen.blit(lives_text, lives_rect)
+        else:
+            # Отображение экрана Game Over
+            game_over_text = self.game_over_font.render("GAME OVER", True, (255, 0, 0))
+            score_text = self.font.render(f'Final Score: {self.score}', True, self.settings.score_color)
+            retry_text = self.button_font.render("Press ENTER to retry or ESC to quit", True, (255, 255, 255))
+            
+            game_over_rect = game_over_text.get_rect(center=(self.settings.screen_width // 2, self.settings.screen_height // 2 - 50))
+            score_rect = score_text.get_rect(center=(self.settings.screen_width // 2, self.settings.screen_height // 2 + 10))
+            retry_rect = retry_text.get_rect(center=(self.settings.screen_width // 2, self.settings.screen_height // 2 + 60))
+            
+            self.screen.blit(game_over_text, game_over_rect)
+            self.screen.blit(score_text, score_rect)
+            self.screen.blit(retry_text, retry_rect)
+        
         pygame.display.flip()
    
     def _update_alians(self):
         self.bullets.update()
         # обновление позиций прищельцев
-        self._check_fleet_edges()
         self.alians.update()
-    
-    def _check_fleet_edges(self):
-        #  Реагирует на достижение прищельцем края экрана
-        for alian in self.alians.sprites():
-            if alian.check_edges():
-                self._change_fleet_direction()
-                break
-    
-    def _change_fleet_direction(self):
-        for alian in self.alians.sprites():
-            alian.rect.y += self.settings.fleet_drop_speed
-        self.settings.fleet_direction *= -1
         
+        # столкновение корабля с пришельцем
+        if pygame.sprite.spritecollideany(self.ship, self.alians):
+            if not self.invulnerable:
+                self._ship_hit()
+    
+    def _ship_hit(self):
+        # удаляем те пришельцы, которые пересеклись с кораблем
+        pygame.sprite.spritecollide(self.ship, self.alians, True)
+        self.lives -= 1
+        if self.lives <= 0:
+            self.game_active = False
+        else:
+            self.invulnerable = True
+            self.invulnerable_start = pygame.time.get_ticks()
+            self.ship.visible = False
+            
+        # включаем неуязвимость и мигание
+        self.invulnerable = True
+        self.invulnerable_start = pygame.time.get_ticks()
+        # сбрасываем видимость корабля (мигание контролируется в ship.update)
+        self.ship.visible = False
+    
+    def _create_fleet(self):
+        alian = Alian(self.screen, self.settings)
+        alian_width, alian_height = alian.rect.size
+        for _ in range(self.settings.number_alians):
+            x = random.randint(0, self.settings.screen_width - alian_width)
+            y = random.randint(-self.settings.screen_height, 0)
+            speed_y = random.uniform(self.settings.rain_speed_min, self.settings.rain_speed_max)
+            speed_x = random.uniform(self.settings.rain_wind_min, self.settings.rain_wind_max)
+            alian = Alian(self.screen, self.settings, x, y, speed_y, speed_x)
+            self.alians.add(alian)
+    
+    def _check_invulnerability(self):
+        if self.invulnerable:
+            now = pygame.time.get_ticks()
+            if now - self.invulnerable_start >= self.invulnerable_duration:
+                self.invulnerable = False
+                self.ship.visible = True
+            
 if __name__ == '__main__':
     ai = AlianInvasion()
     ai.run_game()
