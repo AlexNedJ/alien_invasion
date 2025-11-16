@@ -13,8 +13,8 @@ class Alian(pygame.sprite.Sprite):
         self.rect.y = y if y is not None else self.rect.height
         self.x = float(self.rect.x)
         self.y = float(self.rect.y)
-        self.speed_y = speed_y if speed_y is not None else random.uniform(self.settings.rain_speed_min, self.settings.rain_speed_max)
-        self.speed_x = speed_x if speed_x is not None else random.uniform(self.settings.rain_wind_min, self.settings.rain_wind_max)
+        self.speed_y = speed_y if speed_y is not None else random.uniform(self.settings.alian_wind_min, self.settings.alian_speed_max)
+        self.speed_x = speed_x if speed_x is not None else random.uniform(self.settings.alian_wind_min, self.settings.alian_wind_max)
     
 
     def update(self):
@@ -25,13 +25,13 @@ class Alian(pygame.sprite.Sprite):
             if self.rect.top > self.screen.get_rect().bottom:
                 self.y = float(-self.rect.height)
                 self.x = random.randint(0, self.settings.screen_width - self.rect.width)
-                self.speed_y = random.uniform(self.settings.rain_speed_min, self.settings.rain_speed_max)
-                self.speed_x = random.uniform(self.settings.rain_wind_min, self.settings.rain_wind_max)
-            # Если капля вышла за правый край, меняем направление на противоположное
+                self.speed_y = random.uniform(self.settings.alian_speed_min, self.settings.alian_speed_max)
+                self.speed_x = random.uniform(self.settings.alian_wind_min, self.settings.alian_wind_max)
+            # Если корабль пришельца вышла за правый край, меняем направление на противоположное
             if self.rect.right > self.screen.get_rect().right:
                 self.x = self.screen.get_rect().right - self.rect.width
                 self.speed_x = -abs(self.speed_x)  # Движение влево
-            # Если капля вышла за левый край, меняем направление на противоположное
+            # Если корабль пришельца вышла за левый край, меняем направление на противоположное
             elif self.rect.left < 0:
                 self.x = 0
                 self.speed_x = abs(self.speed_x) 

@@ -24,8 +24,8 @@ class Settings():
         
         self.number_alians = 5
         
-        self.rain_speed_min = 0.1
-        self.rain_speed_max = 0.2
+        self.alian_speed_min = 0.1
+        self.alian_speed_max = 0.2
         # Диапазон горизонтальной скорости
-        self.rain_wind_min = -0.1
-        self.rain_wind_max = 0.2
+        self.alian_wind_min = -0.1
+        self.alian_wind_max = 0.2

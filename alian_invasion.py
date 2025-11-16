@@ -5,15 +5,23 @@ import pygame
 from bullet import Bullet
 from alien import Alian
 import random
+from button import Button
 
 class AlianInvasion:
     def __init__(self):
         pygame.init()
         self.clock = pygame.time.Clock() 
-        self.game_active = True
+        self.game_active = False
         self.game_over_font = pygame.font.Font(None, 74)
         self.button_font = pygame.font.Font(None, 36)
-        
+        self.menu_items = [{'text': 'Resume', 'action': self._resume_game},
+                           {'text': 'Settings', 'action': self._show_settings},
+                           {'text': 'Main Menu', 'action': self._goto_main_menu},
+                           {'text': 'Exit', 'action': self._quit_game},
+                           ]
+        self.selected_item = 0
+        self.paused = False
+        self.menu_font = pygame.font.Font(None, 36) 
         self.settings = Settings()
         self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
         self.screen_rect = self.screen.get_rect()
@@ -32,6 +40,9 @@ class AlianInvasion:
         self.alians = pygame.sprite.Group()
         self._create_fleet()
         
+        # Создание кнопки Play.
+        self.play_button = Button(self, "Play")
+        
         # ----- moon animation init -----
         self.moon_surf = getattr(self.settings, 'moon', None)
         if not self.moon_surf:
@@ -48,17 +59,6 @@ class AlianInvasion:
         self.moon_vx = random.uniform(-0.025, 0.025)   # скорость в пикселях/мс (маленькая)
         self.moon_vy = random.uniform(-0.015, 0.015)
         self.moon_change_timer = 0
-
-    def run_game(self):
-        while True:
-            self._check_events()
-            if self.game_active:
-                self.ship.update()
-                self._update_bullets()
-                self._update_alians()
-                self._check_invulnerability()
-                self._update_background_objects()
-                self._update_screen()
             
     def _update_background_objects(self):
         # --- moon ---
@@ -86,36 +86,75 @@ class AlianInvasion:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                mouse_pos = pygame.mouse.get_pos()
+                self._check_play_button(mouse_pos)
             elif event.type == pygame.KEYDOWN:
-                self._check_keydown_events(event) # событие нажатие на кнопку # <--тут закончили
+                self._check_keydown_events(event) # событие нажатие на кнопку
 
             elif event.type == pygame.KEYUP: # событие отпустили кнопку
                 self._check_keyup_events(event)
+                
+    def _check_play_button(self, mouse_pos):
+        """Запускает новую игру при нажатии кнопки Play."""
+        if not self.game_active:
+            button_clicked = self.play_button.rect.collidepoint(mouse_pos)
+            if button_clicked:
+                self._reset_game()
 
     def _check_keydown_events(self, event):
-        if self.game_active:
+        # Игра активна и не на паузе — обработка управления
+        if self.game_active and not self.paused:
+            if event.key == pygame.K_ESCAPE:
+                self.paused = True
+                return
             if event.key == pygame.K_RIGHT:
-                self.ship.rect.x += 1
                 self.ship.moving_right = True
             elif event.key == pygame.K_LEFT:
-                self.ship.rect.x -= 1
                 self.ship.moving_left = True
-            elif event.key == pygame.K_q:
-                sys.exit()               
             elif event.key == pygame.K_UP:
                 self.ship.moving_up = True
-                    
             elif event.key == pygame.K_DOWN:
                 self.ship.moving_down = True
-            
             elif event.key == pygame.K_SPACE:
                 self._fire_bullet()
-                pass
-        else:
-            if event.key == pygame.K_RETURN:  # Enter для перезапуска
-                self._reset_game()
-            elif event.key == pygame.K_ESCAPE:  # Esc для выхода
+            elif event.key == pygame.K_q:
                 sys.exit()
+            return
+
+        # Меню паузы
+        if self.paused:
+            if event.key == pygame.K_ESCAPE:
+                self.paused = False
+            elif event.key == pygame.K_UP:
+                self.selected_item = (self.selected_item - 1) % len(self.menu_items)
+            elif event.key == pygame.K_DOWN:
+                self.selected_item = (self.selected_item + 1) % len(self.menu_items)
+            elif event.key == pygame.K_RETURN:
+                action = self.menu_items[self.selected_item].get('action')
+                if callable(action):
+                    action()
+            return
+
+        # Главное меню / экран Game Over
+        if not self.game_active:
+            if event.key == pygame.K_RETURN:
+                self._reset_game()
+            elif event.key == pygame.K_ESCAPE and self.lives <= 0:
+                sys.exit()
+    
+    def _check_keyup_events(self, event):
+        if event.key == pygame.K_RIGHT:
+            self.ship.moving_right = False
+                    
+        elif event.key == pygame.K_LEFT:
+            self.ship.moving_left = False
+                
+        elif event.key == pygame.K_UP:
+            self.ship.moving_up = False
+                
+        elif event.key == pygame.K_DOWN:
+            self.ship.moving_down = False
     
     def _reset_game(self):
         # Сброс игры к начальному состоянию
@@ -136,19 +175,6 @@ class AlianInvasion:
         if len(self.bullets) < self.settings.bullet_allowed:
             new_bullet = Bullet(self)
             self.bullets.add(new_bullet)
-    
-    def _check_keyup_events(self, event):
-        if event.key == pygame.K_RIGHT:
-            self.ship.moving_right = False
-                    
-        elif event.key == pygame.K_LEFT:
-            self.ship.moving_left = False
-                
-        elif event.key == pygame.K_UP:
-            self.ship.moving_up = False
-                
-        elif event.key == pygame.K_DOWN:
-            self.ship.moving_down = False
             
     def _update_bullets(self):
         for bullet in self.bullets.copy():
@@ -176,8 +202,8 @@ class AlianInvasion:
     def _update_screen(self):
         self.screen.fill((0, 0, 0)) # clear screen
         # отрисовка Луны (перед основным фоном, но позади корабля/пришельцев)
-        self.screen.blit(self.moon_surf, (int(self.moon_x), int(self.moon_y)))
-            
+        self.screen.blit(self.moon_surf, (int(self.moon_x), int(self.moon_y)))   
+                
         if self.game_active:
             self.ship.blitime()
             for bullet in self.bullets.sprites():
@@ -196,7 +222,11 @@ class AlianInvasion:
             lives_rect.left = 10
             lives_rect.top = 10
             self.screen.blit(lives_text, lives_rect)
-        else:
+            
+            if self.paused:
+                self._draw_pause_menu()
+                
+        elif self.lives <= 0:
             # Отображение экрана Game Over
             game_over_text = self.game_over_font.render("GAME OVER", True, (255, 0, 0))
             score_text = self.font.render(f'Final Score: {self.score}', True, self.settings.score_color)
@@ -208,10 +238,43 @@ class AlianInvasion:
             
             self.screen.blit(game_over_text, game_over_rect)
             self.screen.blit(score_text, score_rect)
-            self.screen.blit(retry_text, retry_rect)
-        
+            self.screen.blit(retry_text, retry_rect)   
+        else:
+            self.play_button.draw_button()
+            
         pygame.display.flip()
-   
+    
+    def _draw_pause_menu(self):
+        # Затемнение экрана
+        s = pygame.Surface((self.settings.screen_width, self.settings.screen_height))
+        s.set_alpha(128)
+        s.fill((0, 0, 0))
+        self.screen.blit(s, (0, 0))
+        
+        # Отрисовка меню
+        menu_y = self.settings.screen_height // 2 - (len(self.menu_items) * 40) // 2
+        for i, item in enumerate(self.menu_items):
+            color = (255, 255, 0) if i == self.selected_item else (255, 255, 255)
+            text = self.menu_font.render(item['text'], True, color)
+            rect = text.get_rect(center=(self.settings.screen_width // 2, menu_y + i * 40))
+            self.screen.blit(text, rect)
+            
+    def _resume_game(self):
+        self.paused = False
+    
+    def _show_settings(self):
+        # Заглушка для будущих настроек
+        print("Settings menu - to be implemented")
+    
+    def _goto_main_menu(self):
+        self.paused = False
+        self.game_active = False
+        # Не очищаем данные игры, чтобы можно было вернуться
+    
+    def _quit_game(self):
+        pygame.quit()
+        sys.exit()
+                
     def _update_alians(self):
         self.bullets.update()
         # обновление позиций прищельцев
@@ -245,8 +308,8 @@ class AlianInvasion:
         for _ in range(self.settings.number_alians):
             x = random.randint(0, self.settings.screen_width - alian_width)
             y = random.randint(-self.settings.screen_height, 0)
-            speed_y = random.uniform(self.settings.rain_speed_min, self.settings.rain_speed_max)
-            speed_x = random.uniform(self.settings.rain_wind_min, self.settings.rain_wind_max)
+            speed_y = random.uniform(self.settings.alian_speed_min, self.settings.alian_speed_max)
+            speed_x = random.uniform(self.settings.alian_wind_min, self.settings.alian_wind_max)
             alian = Alian(self.screen, self.settings, x, y, speed_y, speed_x)
             self.alians.add(alian)
     
@@ -256,7 +319,18 @@ class AlianInvasion:
             if now - self.invulnerable_start >= self.invulnerable_duration:
                 self.invulnerable = False
                 self.ship.visible = True
-            
+                
+    def run_game(self):
+        while True:
+            self._check_events()
+            if self.game_active and not self.paused:
+                self.ship.update()
+                self._update_bullets()
+                self._update_alians()
+                self._check_invulnerability()
+                self._update_background_objects()
+            self._update_screen()
+                        
 if __name__ == '__main__':
     ai = AlianInvasion()
     ai.run_game()
